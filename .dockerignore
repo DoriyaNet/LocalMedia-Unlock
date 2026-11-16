@@ -1,0 +1,16 @@
+.git
+.gitignore
+.dockerignore
+.local
+.tmp
+.webui-test
+bin
+dist
+data
+config
+kernels
+*.log
+*.tar.gz
+*.zip
+coverage.*
+

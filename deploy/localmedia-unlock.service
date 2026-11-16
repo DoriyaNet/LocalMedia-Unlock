@@ -1,0 +1,50 @@
+[Unit]
+Description=LocalMedia Unlock streaming proxy controller
+Documentation=https://github.com/DoriyaNet/LocalMedia-Unlock
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=localmedia
+Group=localmedia
+ExecStart=/usr/local/bin/localmedia-unlock serve --config /etc/localmedia-unlock/config.json
+WorkingDirectory=/var/lib/localmedia-unlock
+EnvironmentFile=-/etc/localmedia-unlock/localmedia-unlock.env
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+LimitNOFILE=65536
+UMask=0077
+
+# The controller writes the complete JSON config (including rotated tokens)
+# through an atomic rename, so the config directory must be writable while
+# the rest of /etc remains read-only. install.sh rewrites both paths when a
+# custom CONFIG_DIR or DATA_DIR is used.
+ReadWritePaths=/var/lib/localmedia-unlock /etc/localmedia-unlock
+
+# Hardening. No capabilities are needed for the default unprivileged ports.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
+

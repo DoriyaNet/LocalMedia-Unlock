@@ -1,0 +1,36 @@
+name: localmedia-unlock
+
+services:
+  localmedia-unlock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localmedia-unlock:local
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      # Keep both management and proxy ports on loopback by default. Change
+      # the proxy binding only after reading the security notes in README.md.
+      - "127.0.0.1:9090:9090"
+      - "127.0.0.1:7890:7890"
+    volumes:
+      - ./data:/data
+      # Optional kernel binaries, mounted read-only. The image does not embed
+      # mihomo/sing-box/xray. Set LOCALMEDIA_*_BIN in the environment if your
+      # paths differ or if you use the host systemd installation instead.
+      - ./kernels:/opt/kernels:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    environment:
+      LOCALMEDIA_DATA_DIR: /data
+    command:
+      - serve
+      - --config
+      - /data/config.json
+      - --listen
+      - 0.0.0.0:9090

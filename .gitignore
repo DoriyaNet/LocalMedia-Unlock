@@ -1,0 +1,32 @@
+# Build output
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+localmedia-unlock
+
+# Local runtime data and configuration (may contain tokens)
+/.local/
+/data/
+/config/
+/.tmp/
+/tmp/
+/.webui-test/
+*.env
+!.env.example
+!deploy/localmedia-unlock.env.example
+
+# Release downloads and temporary files
+*.tar.gz
+*.zip
+*.tmp
+
+# Editors and operating-system metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+

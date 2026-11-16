@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#080b12">
+  <title>LocalMedia Unlock</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="aurora aurora-one" aria-hidden="true"></div>
+  <div class="aurora aurora-two" aria-hidden="true"></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M8 12.5 20 5l12 7.5v15L20 35 8 27.5v-15Z" stroke="currentColor" stroke-width="1.6"/>
+            <path d="m14 15 6-3.8 6 3.8v7.2L20 26l-6-3.8V15Z" fill="currentColor" opacity=".9"/>
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <strong>LocalMedia</strong>
+          <span>Unlock Controller</span>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="主导航">
+        <p class="nav-label">工作台</p>
+        <a class="nav-item" href="#overview" data-view="overview">
+          <span class="nav-icon">⌁</span><span>概览</span>
+        </a>
+        <a class="nav-item" href="#routes" data-view="routes">
+          <span class="nav-icon">⇄</span><span>分流规则</span>
+        </a>
+        <a class="nav-item" href="#outbounds" data-view="outbounds">
+          <span class="nav-icon">◎</span><span>出口节点</span>
+          <span class="nav-count" id="nav-outbound-count">0</span>
+        </a>
+        <a class="nav-item" href="#inbounds" data-view="inbounds">
+          <span class="nav-icon">⌂</span><span>入站 / 客户端</span>
+        </a>
+        <p class="nav-label nav-label-spaced">系统</p>
+        <a class="nav-item" href="#settings" data-view="settings">
+          <span class="nav-icon">⚙</span><span>系统设置</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="secure-note">
+          <span class="pulse-dot"></span>
+          <span>本地管理控制台</span>
+        </div>
+        <button class="text-button" id="logout-button" type="button" hidden>清除管理令牌</button>
+      </div>
+    </aside>
+
+    <div class="backdrop" id="backdrop" hidden></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button menu-button" id="menu-button" type="button" aria-label="打开菜单" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="status-cluster">
+            <span class="status-pill" id="service-status">
+              <span class="status-dot"></span>
+              <span id="service-status-text">正在连接</span>
+            </span>
+            <span class="topbar-meta" title="当前运行内核">内核 <b id="kernel-name">—</b></span>
+              <span class="topbar-meta" title="内核版本（API 暂未单独提供时为“未提供”）">版本 <b id="kernel-version">未提供</b></span>
+            <span class="topbar-meta" title="服务已运行时间">运行 <b id="uptime">—</b></span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="button button-subtle button-sm" id="service-restart" type="button" title="重启服务">
+            <span aria-hidden="true">↻</span> 重启
+          </button>
+          <button class="button button-subtle button-sm" id="service-stop" type="button" title="停止服务">
+            <span class="stop-icon" aria-hidden="true"></span> 停止
+          </button>
+          <button class="button button-primary button-sm" id="service-start" type="button" title="启动服务">
+            <span class="play-icon" aria-hidden="true"></span> 启动
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="view" id="view-overview" data-view-panel="overview" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">CONTROL CENTER</p>
+              <h1>概览</h1>
+              <p class="page-description">流量走向、节点健康与运行状态一目了然。</p>
+            </div>
+            <button class="button button-subtle button-sm" id="overview-refresh" type="button">
+              <span aria-hidden="true">↻</span> 刷新
+            </button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-label">出口节点</span><span class="metric-symbol">◎</span></div>
+              <strong class="metric-value" id="metric-nodes">—</strong>
+              <span class="metric-caption">已配置且可用于分流</span>
+            </article>
+            <article class="metric-card metric-card-accent">
+              <div class="metric-top"><span class="metric-label">服务规则</span><span class="metric-symbol">⇄</span></div>
+              <strong class="metric-value" id="metric-routes">—</strong>
+              <span class="metric-caption">包含启用与停用的预设</span>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-label">启用出口</span><span class="metric-symbol">↑</span></div>
+              <strong class="metric-value" id="metric-enabled">—</strong>
+              <span class="metric-caption">当前可承载流量的节点</span>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top"><span class="metric-label">默认出口</span><span class="metric-symbol">⌂</span></div>
+              <strong class="metric-value metric-value-name" id="metric-default">—</strong>
+              <span class="metric-caption">未命中规则时使用</span>
+            </article>
+          </div>
+
+          <div class="overview-grid">
+            <article class="panel panel-log">
+              <div class="panel-heading">
+                <div>
+                  <h2>最近日志</h2>
+                  <p>实时观察内核和规则运行情况</p>
+                </div>
+                <span class="live-label"><span class="pulse-dot"></span>LIVE</span>
+              </div>
+              <div class="log-viewport" id="log-list" aria-live="polite">
+                <div class="loading-inline">正在读取日志…</div>
+              </div>
+            </article>
+
+            <div class="side-stack">
+              <article class="panel">
+                <div class="panel-heading">
+                  <div><h2>运行信息</h2><p>当前控制器快照</p></div>
+                </div>
+                <dl class="detail-list">
+                  <div><dt>代理服务</dt><dd id="detail-status">—</dd></div>
+                  <div><dt>当前内核</dt><dd id="detail-kernel">—</dd></div>
+                  <div><dt>内核版本</dt><dd id="detail-version">未提供</dd></div>
+                  <div><dt>连续运行</dt><dd id="detail-uptime">—</dd></div>
+                  <div><dt>入站监听</dt><dd id="detail-inbounds">—</dd></div>
+                </dl>
+              </article>
+              <article class="panel guide-panel">
+                <div class="guide-icon">↗</div>
+                <h2>开始接管流量</h2>
+                <p>将客户端代理指向入站地址后，按服务预设选择出口即可完成最小化分流。</p>
+                <a class="inline-link" href="#inbounds">查看客户端接入 <span>→</span></a>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-routes" data-view-panel="routes" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ROUTING POLICY</p>
+              <h1>分流规则</h1>
+              <p class="page-description">为每个服务指定出口，规则将按服务域名集合生效。</p>
+            </div>
+            <div class="heading-actions">
+              <button class="button button-subtle button-sm" id="routes-reset" type="button">撤销修改</button>
+              <button class="button button-primary button-sm" id="routes-save" type="button">保存规则</button>
+            </div>
+          </div>
+
+          <div class="notice notice-info">
+            <span class="notice-icon">i</span>
+            <span>未命中任何服务规则或自定义规则时，流量将进入 <b>默认出口</b>。当前默认：<b id="routes-default-label">—</b></span>
+          </div>
+
+          <article class="panel">
+            <div class="panel-heading panel-heading-wrap">
+              <div>
+                <h2>服务预设</h2>
+                <p>数据来自预设目录，开关与出口可批量保存</p>
+              </div>
+              <div class="search-field">
+                <span aria-hidden="true">⌕</span>
+                <input id="preset-search" type="search" placeholder="搜索服务…" autocomplete="off">
+              </div>
+            </div>
+            <div class="route-list" id="route-list">
+              <div class="loading-inline">正在读取服务预设…</div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading panel-heading-wrap">
+              <div>
+                <h2>自定义规则</h2>
+                <p>按域名后缀或关键词覆盖默认路由</p>
+              </div>
+              <button class="button button-subtle button-sm" id="custom-rule-add" type="button">＋ 新增规则</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table custom-rule-table">
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>域名后缀 / 关键词</th>
+                    <th>出口</th>
+                    <th>启用</th>
+                    <th><span class="sr-only">操作</span></th>
+                  </tr>
+                </thead>
+                <tbody id="custom-rule-list"></tbody>
+              </table>
+            </div>
+            <div class="empty-state compact" id="custom-rule-empty" hidden>
+              <div class="empty-symbol">⌁</div>
+              <h3>暂无自定义规则</h3>
+              <p>没有匹配的服务可单独指定出口。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="view-outbounds" data-view-panel="outbounds" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">EGRESS NODES</p>
+              <h1>出口节点</h1>
+              <p class="page-description">管理代理节点、导入订阅，并检查服务器 TCP 可达性。</p>
+            </div>
+            <div class="heading-actions">
+              <button class="button button-subtle button-sm" id="outbound-import-toggle" type="button">导入</button>
+              <button class="button button-primary button-sm" id="outbound-add" type="button">＋ 新增节点</button>
+            </div>
+          </div>
+
+          <div class="import-panel panel" id="import-panel" hidden>
+            <div class="import-tabs" role="tablist" aria-label="导入方式">
+              <button class="import-tab is-active" type="button" data-import-tab="uri" role="tab" aria-selected="true">URI 链接</button>
+              <button class="import-tab" type="button" data-import-tab="subscription" role="tab" aria-selected="false">订阅内容</button>
+            </div>
+            <div class="import-body" data-import-body="uri">
+              <label class="field">
+                <span>节点 URI</span>
+                <input id="import-uri" type="text" placeholder="ss:// / vmess:// / vless:// / trojan:// / hysteria2://" spellcheck="false">
+              </label>
+              <p class="field-hint">支持单条分享链接，服务端会自动解析节点字段。</p>
+              <div class="form-actions">
+                <button class="button button-subtle button-sm" type="button" data-import-close>取消</button>
+                <button class="button button-primary button-sm" id="import-uri-submit" type="button">导入节点</button>
+              </div>
+            </div>
+            <div class="import-body" data-import-body="subscription" hidden>
+              <label class="field">
+                <span>订阅内容</span>
+                <textarea id="import-subscription" rows="7" placeholder="粘贴明文多行 URI，或 Base64 编码的订阅内容…" spellcheck="false"></textarea>
+              </label>
+              <p class="field-hint">不会保存原始订阅内容；仅导入其中的节点。</p>
+              <div class="form-actions">
+                <button class="button button-subtle button-sm" type="button" data-import-close>取消</button>
+                <button class="button button-primary button-sm" id="import-subscription-submit" type="button">解析并导入</button>
+              </div>
+            </div>
+          </div>
+
+          <article class="panel">
+            <div class="panel-heading panel-heading-wrap">
+              <div>
+                <h2>节点列表</h2>
+                <p><span id="outbound-list-count">0</span> 个节点，支持 TCP 连通性测试和搜索</p>
+              </div>
+              <div class="search-field">
+                <span aria-hidden="true">⌕</span>
+                <input id="outbound-search" type="search" placeholder="搜索名称或服务器…" autocomplete="off">
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table outbound-table">
+                <thead>
+                  <tr>
+                    <th>节点</th>
+                    <th>协议</th>
+                    <th>服务器</th>
+                    <th>状态</th>
+                    <th>TCP 握手</th>
+                    <th><span class="sr-only">操作</span></th>
+                  </tr>
+                </thead>
+                <tbody id="outbound-list"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="outbound-empty" hidden>
+              <div class="empty-symbol">◎</div>
+              <h3>还没有出口节点</h3>
+              <p>新增一个节点，或从 URI / 订阅批量导入。</p>
+              <button class="button button-primary button-sm" type="button" id="outbound-empty-add">新增节点</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="view-inbounds" data-view-panel="inbounds" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">CLIENT ACCESS</p>
+              <h1>入站 / 客户端</h1>
+              <p class="page-description">配置本地代理监听，并把客户端接入这套分流网络。</p>
+            </div>
+            <button class="button button-primary button-sm" id="inbounds-save" type="button">保存入站</button>
+          </div>
+
+          <div class="client-grid">
+            <article class="panel">
+              <div class="panel-heading">
+                <div><h2>入站监听</h2><p>支持 mixed、SOCKS5 与 HTTP 类型</p></div>
+                <button class="button button-subtle button-xs" id="inbound-add" type="button">＋ 添加</button>
+              </div>
+              <div id="inbound-list" class="inbound-list">
+                <div class="loading-inline">正在读取入站配置…</div>
+              </div>
+            </article>
+
+            <div class="side-stack">
+              <article class="panel subscription-panel">
+                <div class="panel-heading">
+                  <div><h2>Clash / Mihomo 订阅</h2><p>一键复制到客户端</p></div>
+                </div>
+                <div class="subscription-box">
+                  <code id="subscription-url" title="订阅地址">加载中…</code>
+                  <button class="icon-button bordered" id="subscription-copy" type="button" aria-label="复制订阅 URI" title="复制订阅 URI">⧉</button>
+                </div>
+                <p class="field-hint">订阅链接包含访问密钥，请仅分享给自己的设备。</p>
+              </article>
+              <article class="panel token-panel">
+                <div class="token-heading">
+                  <span class="token-icon">◈</span>
+                  <div><h2>面板访问令牌</h2><p>管理 API 需要身份验证</p></div>
+                </div>
+                <p>首次连接时使用服务端生成的 Admin Token。令牌仅存放在当前浏览器会话中，不会写入配置页面。</p>
+                <button class="text-button subtle-link" id="token-change" type="button">更换当前令牌 →</button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-settings" data-view-panel="settings" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">SYSTEM</p>
+              <h1>系统设置</h1>
+              <p class="page-description">内核、出口与网络解析策略。</p>
+            </div>
+            <button class="button button-primary button-sm" id="settings-save" type="button">保存设置</button>
+          </div>
+
+          <form id="settings-form" class="settings-layout" autocomplete="off">
+            <div class="settings-main">
+              <article class="panel">
+                <div class="panel-heading"><div><h2>内核与出口</h2><p>选择流量由哪个内核生成配置</p></div></div>
+                <div class="field-grid">
+                  <label class="field">
+                    <span>代理内核</span>
+                    <select id="setting-core">
+                      <option value="mihomo">Mihomo</option>
+                      <option value="singbox">sing-box</option>
+                      <option value="xray">Xray</option>
+                    </select>
+                    <small>切换后需要保存并重启服务。</small>
+                  </label>
+                  <label class="field">
+                    <span>默认出口</span>
+                    <select id="setting-default-outbound"></select>
+                    <small>没有规则命中时使用。</small>
+                  </label>
+                  <label class="field">
+                    <span>日志级别</span>
+                    <select id="setting-log-level">
+                      <option value="debug">Debug</option>
+                      <option value="info">Info</option>
+                      <option value="warn">Warn</option>
+                      <option value="error">Error</option>
+                      <option value="silent">Silent</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>探测地址</span>
+                    <input id="setting-probe-url" type="url" placeholder="https://www.gstatic.com/generate_204" spellcheck="false">
+                  </label>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading"><div><h2>DNS</h2><p>系统解析或指定远程 DNS</p></div></div>
+                <div class="field-grid">
+                  <label class="field">
+                    <span>解析模式</span>
+                    <select id="setting-dns-mode">
+                      <option value="system">System · 系统 DNS</option>
+                      <option value="remote">Remote · 远程 DNS</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>远程 DNS 服务器</span>
+                    <input id="setting-dns-server" type="text" placeholder="1.1.1.1" spellcheck="false">
+                    <small>Remote 模式要求填写 IP 地址。</small>
+                  </label>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading"><div><h2>高级</h2><p>控制管理面和本地网络访问</p></div></div>
+                <div class="field-grid">
+                  <label class="field">
+                    <span>管理 API 监听</span>
+                    <input id="setting-listen" type="text" placeholder="127.0.0.1:9090" spellcheck="false">
+                    <small>格式为 host:port。</small>
+                  </label>
+                  <label class="field">
+                    <span>订阅基础地址</span>
+                    <input id="setting-subscription-base-url" type="url" placeholder="https://example.com" spellcheck="false">
+                    <small>留空时使用当前面板地址。</small>
+                  </label>
+                </div>
+                <div class="switch-list">
+                  <label class="switch-row">
+                    <span><b>允许局域网连接</b><small>监听局域网设备，而不只是本机。</small></span>
+                    <input id="setting-allow-lan" type="checkbox" class="switch-input">
+                    <span class="switch" aria-hidden="true"></span>
+                  </label>
+                  <label class="switch-row">
+                    <span><b>开机自动启动</b><small>服务启动后自动拉起代理内核。</small></span>
+                    <input id="setting-auto-start" type="checkbox" class="switch-input">
+                    <span class="switch" aria-hidden="true"></span>
+                  </label>
+                  <label class="switch-row">
+                    <span><b>代理认证</b><small>客户端连接入站时必须提供用户名和密码。</small></span>
+                    <input id="setting-proxy-auth" type="checkbox" class="switch-input">
+                    <span class="switch" aria-hidden="true"></span>
+                  </label>
+                </div>
+                <div class="field-grid" id="proxy-auth-fields">
+                  <label class="field">
+                    <span>代理用户名</span>
+                    <input id="setting-proxy-username" type="text" autocomplete="off">
+                  </label>
+                  <label class="field">
+                    <span>代理密码</span>
+                    <input id="setting-proxy-pw" type="text" autocomplete="off">
+                  </label>
+                </div>
+              </article>
+            </div>
+
+            <aside class="settings-side">
+              <article class="panel">
+                <div class="panel-heading"><div><h2>配置备份</h2><p>迁移或归档完整配置</p></div></div>
+                <p class="settings-copy">导出内容包含节点凭据，请妥善保管。</p>
+                <button class="button button-subtle button-block" id="config-export" type="button">下载配置 JSON</button>
+                <div class="divider"></div>
+                <label class="field file-field">
+                  <span>导入配置</span>
+                  <input id="config-import-file" type="file" accept="application/json,.json">
+                </label>
+                <button class="button button-subtle button-block" id="config-import" type="button" disabled>导入配置文件</button>
+              </article>
+              <article class="panel meta-panel">
+                <div class="panel-heading"><div><h2>连接信息</h2><p>当前会话</p></div></div>
+                <dl class="detail-list">
+                  <div><dt>API 地址</dt><dd id="meta-api-base">—</dd></div>
+                  <div><dt>鉴权方式</dt><dd id="meta-auth">—</dd></div>
+                  <div><dt>配置版本</dt><dd id="meta-schema">—</dd></div>
+                </dl>
+              </article>
+            </aside>
+          </form>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="login-modal" hidden>
+    <section class="modal login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div class="login-mark">⌁</div>
+      <p class="eyebrow">AUTHORIZED ACCESS</p>
+      <h2 id="login-title">连接管理面板</h2>
+      <p class="modal-description">请输入服务端配置的 Admin Token。令牌只保存在当前浏览器会话中。</p>
+      <form id="login-form">
+        <input type="hidden" name="username" value="admin" autocomplete="username">
+        <label class="field">
+          <span>Admin Token</span>
+          <input id="login-token" type="text" placeholder="粘贴管理令牌" autocomplete="off" spellcheck="false" required>
+        </label>
+        <p class="form-error" id="login-error" role="alert" hidden></p>
+        <button class="button button-primary button-block" id="login-submit" type="submit">验证并进入</button>
+      </form>
+      <p class="login-help">令牌可在服务端配置或首次启动日志中找到。</p>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="outbound-modal" hidden>
+    <section class="modal form-modal" role="dialog" aria-modal="true" aria-labelledby="outbound-modal-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">EGRESS NODE</p>
+          <h2 id="outbound-modal-title">新增出口节点</h2>
+        </div>
+        <button class="icon-button bordered modal-close" type="button" data-modal-close="outbound-modal" aria-label="关闭">×</button>
+      </div>
+      <form id="outbound-form">
+        <div class="modal-body">
+          <div class="field-grid">
+            <label class="field">
+              <span>节点名称 <em>*</em></span>
+              <input id="outbound-name" type="text" placeholder="例如：US · 洛杉矶 01" required>
+            </label>
+            <label class="field">
+              <span>协议 <em>*</em></span>
+              <select id="outbound-type" name="type" required>
+                <option value="ss">Shadowsocks</option>
+                <option value="vmess">VMess</option>
+                <option value="vless">VLESS</option>
+                <option value="trojan">Trojan</option>
+                <option value="hysteria2">Hysteria2</option>
+                <option value="socks">SOCKS</option>
+                <option value="http">HTTP</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>服务器 <em>*</em></span>
+              <input id="outbound-server" type="text" placeholder="example.com" required spellcheck="false">
+            </label>
+            <label class="field">
+              <span>端口 <em>*</em></span>
+              <input id="outbound-port" type="number" min="1" max="65535" placeholder="443" required>
+            </label>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-head"><h3>认证</h3><span>根据协议填写</span></div>
+            <div class="field-grid">
+              <label class="field" data-show-types="ss vmess trojan socks http">
+                <span>用户名</span>
+                <input id="outbound-username" type="text" autocomplete="off">
+              </label>
+              <label class="field" data-show-types="ss trojan hysteria2">
+                <span>密码 <em data-required-for="ss trojan hysteria2">*</em></span>
+                <input id="outbound-pw" type="text" autocomplete="off">
+              </label>
+              <label class="field" data-show-types="vmess vless">
+                <span>UUID <em data-required-for="vmess vless">*</em></span>
+                <input id="outbound-uuid" type="text" spellcheck="false">
+              </label>
+              <label class="field" data-show-types="ss">
+                <span>加密方法 <em>*</em></span>
+                <select id="outbound-method" name="method">
+                  <option value="aes-256-gcm">aes-256-gcm</option>
+                  <option value="aes-128-gcm">aes-128-gcm</option>
+                  <option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
+                  <option value="2022-blake3-aes-256-gcm">2022-blake3-aes-256-gcm</option>
+                  <option value="2022-blake3-aes-128-gcm">2022-blake3-aes-128-gcm</option>
+                  <option value="none">none</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-head"><h3>传输与 TLS</h3><span>可选</span></div>
+            <div class="field-grid">
+              <label class="field">
+                <span>传输方式</span>
+                <select id="outbound-network" name="network">
+                  <option value="tcp">TCP</option>
+                  <option value="ws">WebSocket</option>
+                  <option value="grpc">gRPC</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>SNI</span>
+                <input id="outbound-sni" type="text" placeholder="example.com" spellcheck="false">
+              </label>
+              <label class="field" data-network="ws">
+                <span>WebSocket 路径</span>
+                <input id="outbound-ws-path" type="text" placeholder="/ws" spellcheck="false">
+              </label>
+              <label class="field" data-network="grpc">
+                <span>gRPC 服务名</span>
+                <input id="outbound-grpc-service" type="text" placeholder="service-name" spellcheck="false">
+              </label>
+              <label class="field">
+                <span>Flow（VLESS）</span>
+                <input id="outbound-flow" type="text" placeholder="xtls-rprx-vision" spellcheck="false">
+              </label>
+              <label class="field">
+                <span>指纹</span>
+                <input id="outbound-fingerprint" type="text" placeholder="chrome" spellcheck="false">
+              </label>
+            </div>
+            <div class="switch-list switch-list-tight">
+              <label class="switch-row">
+                <span><b>启用 TLS</b><small>加密与证书校验。</small></span>
+                <input id="outbound-tls" type="checkbox" class="switch-input">
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+              <label class="switch-row">
+                <span><b>跳过证书校验</b><small>allowInsecure，不建议用于公开网络。</small></span>
+                <input id="outbound-allow-insecure" type="checkbox" class="switch-input">
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+              <label class="switch-row">
+                <span><b>REALITY</b><small>使用公钥与 Short ID 建立连接。</small></span>
+                <input id="outbound-reality" type="checkbox" class="switch-input">
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+              <label class="switch-row">
+                <span><b>启用此节点</b><small>停用后不会出现在出口候选中。</small></span>
+                <input id="outbound-enabled" type="checkbox" class="switch-input" checked>
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+            </div>
+            <div class="field-grid" id="reality-fields" hidden>
+              <label class="field">
+                <span>REALITY 公钥</span>
+                <input id="outbound-public-key" type="text" spellcheck="false">
+              </label>
+              <label class="field">
+                <span>Short ID</span>
+                <input id="outbound-short-id" type="text" spellcheck="false">
+              </label>
+            </div>
+          </div>
+
+          <details class="advanced-details">
+            <summary>高级参数</summary>
+            <div class="field-grid">
+              <label class="field">
+                <span>安全模式</span>
+                <input id="outbound-security" type="text" placeholder="例如：auto / none" spellcheck="false">
+              </label>
+              <label class="field">
+                <span>插件</span>
+                <input id="outbound-plugin" type="text" placeholder="obfs-local / v2ray-plugin" spellcheck="false">
+              </label>
+              <label class="field field-full">
+                <span>插件参数</span>
+                <input id="outbound-plugin-opts" type="text" placeholder='例如：{"obfs":"http","obfs-host":"example.com"}' spellcheck="false">
+                <small>填写 JSON 对象，留空表示无参数。</small>
+              </label>
+              <label class="field">
+                <span>上行 Mbps</span>
+                <input id="outbound-up-mbps" type="number" min="0">
+              </label>
+              <label class="field">
+                <span>下行 Mbps</span>
+                <input id="outbound-down-mbps" type="number" min="0">
+              </label>
+            </div>
+          </details>
+        </div>
+        <div class="modal-foot">
+          <span class="form-error" id="outbound-form-error" role="alert"></span>
+          <button class="button button-subtle button-sm" type="button" data-modal-close="outbound-modal">取消</button>
+          <button class="button button-primary button-sm" id="outbound-save" type="submit">保存节点</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="confirm-modal" hidden>
+    <section class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <div class="confirm-icon">!</div>
+      <h2 id="confirm-title">确认操作</h2>
+      <p id="confirm-message" class="modal-description"></p>
+      <div class="modal-foot modal-foot-center">
+        <button class="button button-subtle button-sm" type="button" id="confirm-cancel">取消</button>
+        <button class="button button-danger button-sm" type="button" id="confirm-accept">确认</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
+
